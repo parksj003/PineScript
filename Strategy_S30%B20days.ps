@@ -1,0 +1,26 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © parksj003
+
+//@version=5
+strategy("3%매도20일매수", overlay=true, default_qty_type = strategy.percent_of_equity, 
+ default_qty_value=100)
+range_fall = input(3.0, "기준하락폭")
+period = input(20, "대기일")
+
+dailyRange = (close - close[1])/close[1]*100
+exitCondition = dailyRange < range_fall*(-1)
+
+var count = 0
+count := exitCondition ? 0 : count + 1
+buyCondition =  count == period
+
+plot(count)
+// plot(exitCondition?1:0,color=color.green)
+bgcolor(exitCondition ?#e39898dd:na)
+bgcolor(buyCondition?color.green:na )
+
+if buyCondition
+    strategy.entry("롱", strategy.long)
+
+if exitCondition
+    strategy.close("롱")
