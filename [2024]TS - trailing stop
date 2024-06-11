@@ -3,6 +3,7 @@
 
 //@version=5
 strategy("[2024]TS - trailingStop", overlay=true, process_orders_on_close = true)
+import TradingView/ta/7
 
 // 퍼센트, ATR 
 // 기술적지표 (ST, BB, KC, DC, etc)
@@ -11,11 +12,19 @@ strategy("[2024]TS - trailingStop", overlay=true, process_orders_on_close = true
 
 
 src = input.string(defval = "close", title="source", options=["close", "low/high", "avg_price"])
-trailMethod = input.string(defval = "percent", title="Method", options=["percent", "atr"])
-percent = input.float(defval=0.03, step=0.01, inline="percent")
-percentLength = input.int(defval=5, inline="percent")
-atrLength = input.int(defval=14)
-atrMult = input.float(defval = 1.0, title = "atrMult")
+trailMethod = input.string(defval = "percent", title="Method", options=["percent", "atr", "bb", "super"])
+
+percentValue = input.float(defval=0.03, step=0.01, title = "Percent Value | Length ", inline="percent")
+percentLength = input.int(defval=5, title = "", inline="percent")
+atrLength = input.int(defval=14, title="ATR Length | Mult",inline="atr")
+atrMult = input.float(defval = 1.0, title = "", inline='atr')
+bbLength = input.int(defval=20, title="BB Length | Mult", inline="bb")
+bbMult = input.float(defval = 2.0, title = "", inline="bb")
+
+superLength = input.int(defval=10, title="Super Length | Mult", inline="super")
+superMult = input.float(defval = 3.0, title = "", inline='super')
+[_, upper, lower] = ta.bb(close, bbLength, bbMult)
+[supertrend, direction] = ta.supertrend(superMult, superLength)
 
 
 float stopLow = na
@@ -23,13 +32,13 @@ float stopHigh = na
 if  trailMethod == "percent"
 
     stopLow := switch src
-        "close" => ta.lowest(close, percentLength) * (1-percent)
-        "low/high" => ta.lowest(low, percentLength) * (1-percent)
-        "avg_price" => strategy.position_avg_price * (1-percent)
+        "close" => ta.lowest(close, percentLength) * (1-percentValue)
+        "low/high" => ta.lowest(low, percentLength) * (1-percentValue)
+        "avg_price" => strategy.position_avg_price * (1-percentValue)
     stopHigh := switch src
-        "close" => ta.highest(close, percentLength) * (1 + percent)
-        "low/high" => ta.highest(high, percentLength) * (1 + percent)
-        "avg_price" => strategy.position_avg_price * (1+percent)
+        "close" => ta.highest(close, percentLength) * (1 + percentValue)
+        "low/high" => ta.highest(high, percentLength) * (1 + percentValue)
+        "avg_price" => strategy.position_avg_price * (1+percentValue)
 if  trailMethod == "atr"
     stopLow := switch src
         "close" => close - ta.atr(atrLength)*atrMult
@@ -39,8 +48,16 @@ if  trailMethod == "atr"
         "close" => close + ta.atr(atrLength)*atrMult
         "low/high" => high + ta.atr(atrLength)*atrMult
         "avg_price" => strategy.position_avg_price + ta.atr(atrLength)*atrMult
+if  trailMethod == "bb"
+    stopLow := lower
+    stopHigh := upper
+if  trailMethod == "super"
+    stopLow := supertrend
+    stopHigh := supertrend
 
-if bar_index == 10
+
+
+if bar_index == 30
     strategy.entry("롱", strategy.long)
 
 
@@ -56,6 +73,13 @@ else
 
 plot(n_Trail, color=strategy.position_size>0 ?color.green:
      (strategy.position_size<0 ? color.red:na), linewidth=2, style=plot.style_steplinebr)
+
+plot(trailMethod == "bb"?upper:na)
+plot(trailMethod == "bb"?upper:na)
+plot(trailMethod == "super"?supertrend:na, color=direction<0?  color.green: color.red,  style=plot.style_line)
+
+
+
 
 // plot(ta.lowest(5))
 strategy.exit("청산", stop = n_Trail)
