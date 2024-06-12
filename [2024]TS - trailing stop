@@ -10,8 +10,6 @@ strategy("[2024]TS - trailingStop", overlay=true, process_orders_on_close = true
 //close low/high
 
 
-if bar_index == 30
-    strategy.entry("롱", strategy.long)
 
 sma1 = ta.sma(close, 50)
 sma2 = ta.sma(close, 200)
@@ -21,8 +19,8 @@ short_signal = ta.crossunder(sma1, sma2)
 // plot(sma1, color=color.red)
 // plot(sma2, color=color.green)
 
-// if long_signal
-//     strategy.entry("롱", strategy.long)
+if long_signal
+    strategy.entry("롱", strategy.long)
 if short_signal
     strategy.entry("숏", strategy.short)
 
