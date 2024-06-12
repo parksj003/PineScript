@@ -24,23 +24,25 @@ if long_signal
 if short_signal
     strategy.entry("숏", strategy.short)
 
+g_trailstop = "Trailing stop"
+g_trailprofit = "Trailing profit"
 
-src = input.string(defval = "close", title="source", options=["close", "low/high", "avg_price"])
-trailMethod = input.string(defval = "percent", title="Method", options=["percent", "atr", "bb", "super"])
+src = input.string(defval = "close", title="source", options=["close", "low/high", "avg_price"], group=g_trailstop)
+trailMethod = input.string(defval = "percent", title="Method", options=["percent", "atr", "bb", "super"], group=g_trailstop)
 
-percentValue = input.float(defval=3, step=1, title = "Percent Value (%) | Length", inline="percent")/100
-percentLength = input.int(defval=5, title = "|", inline="percent")
-atrLength = input.int(defval=14, title="ATR Length | Mult",inline="atr")
-atrMult = input.float(defval = 1.0, title = "|", inline='atr')
-bbLength = input.int(defval=20, title="BB Length | Mult", inline="bb")
-bbMult = input.float(defval = 2.0, title = "|", inline="bb")
+percentValue = input.float(defval=3, step=1, title = "Percent Value (%) | Length", inline="percent", group=g_trailstop)/100
+percentLength = input.int(defval=5, title = "|", inline="percent", group=g_trailstop)
+atrLength = input.int(defval=14, title="ATR Length | Mult",inline="atr", group=g_trailstop)
+atrMult = input.float(defval = 1.0, title = "|", inline='atr', group=g_trailstop)
+bbLength = input.int(defval=20, title="BB Length | Mult", inline="bb", group=g_trailstop)
+bbMult = input.float(defval = 2.0, title = "|", inline="bb", group=g_trailstop)
 
-superLength = input.int(defval=10, title="Super Length | Mult", inline="super")
-superMult = input.float(defval = 3.0, title = "|", inline='super')
+superLength = input.int(defval=10, title="Super Length | Mult", inline="super", group=g_trailstop)
+superMult = input.float(defval = 3.0, title = "|", inline='super', group=g_trailstop)
 [_, upper, lower] = ta.bb(close, bbLength, bbMult)
 [supertrend, direction] = ta.supertrend(superMult, superLength)
 
-profit_percent = input.float(defval = 100, title= "Profit limit (%)" ,step = 1)/100
+profit_percent = input.float(defval = 100, title= "Profit limit (%)" ,step = 1, group=g_trailprofit)/100
 
 
 float stopLow = na
