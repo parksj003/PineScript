@@ -3,28 +3,46 @@
 
 //@version=5
 strategy("[2024]TS - trailingStop", overlay=true, process_orders_on_close = true)
-import TradingView/ta/7
+// import TradingView/ta/7
 
 // 퍼센트, ATR 
 // 기술적지표 (ST, BB, KC, DC, etc)
 //close low/high
 
 
+if bar_index == 30
+    strategy.entry("롱", strategy.long)
+
+sma1 = ta.sma(close, 50)
+sma2 = ta.sma(close, 200)
+
+long_signal = ta.crossover(sma1, sma2)
+short_signal = ta.crossunder(sma1, sma2)
+// plot(sma1, color=color.red)
+// plot(sma2, color=color.green)
+
+// if long_signal
+//     strategy.entry("롱", strategy.long)
+if short_signal
+    strategy.entry("숏", strategy.short)
+
 
 src = input.string(defval = "close", title="source", options=["close", "low/high", "avg_price"])
 trailMethod = input.string(defval = "percent", title="Method", options=["percent", "atr", "bb", "super"])
 
-percentValue = input.float(defval=0.03, step=0.01, title = "Percent Value | Length ", inline="percent")
-percentLength = input.int(defval=5, title = "", inline="percent")
+percentValue = input.float(defval=3, step=1, title = "Percent Value (%) | Length", inline="percent")/100
+percentLength = input.int(defval=5, title = "|", inline="percent")
 atrLength = input.int(defval=14, title="ATR Length | Mult",inline="atr")
-atrMult = input.float(defval = 1.0, title = "", inline='atr')
+atrMult = input.float(defval = 1.0, title = "|", inline='atr')
 bbLength = input.int(defval=20, title="BB Length | Mult", inline="bb")
-bbMult = input.float(defval = 2.0, title = "", inline="bb")
+bbMult = input.float(defval = 2.0, title = "|", inline="bb")
 
 superLength = input.int(defval=10, title="Super Length | Mult", inline="super")
-superMult = input.float(defval = 3.0, title = "", inline='super')
+superMult = input.float(defval = 3.0, title = "|", inline='super')
 [_, upper, lower] = ta.bb(close, bbLength, bbMult)
 [supertrend, direction] = ta.supertrend(superMult, superLength)
+
+profit_percent = input.float(defval = 100, title= "Profit limit (%)" ,step = 1)/100
 
 
 float stopLow = na
@@ -55,32 +73,47 @@ if  trailMethod == "super"
     stopLow := supertrend
     stopHigh := supertrend
 
+var float stopPrice = na
 
 
-if bar_index == 30
-    strategy.entry("롱", strategy.long)
+if strategy.position_avg_price != 0
+    if (strategy.position_size > 0) and (na(stopPrice) or stopPrice < stopLow)
+        stopPrice := stopLow
+        
 
-
-var float n_Trail = na
-if strategy.position_avg_price != 0 
-    if strategy.position_avg_price > 0 and (na(n_Trail) or n_Trail < stopLow)
-        n_Trail := stopLow 
-    else if strategy.position_avg_price < 0 and (na(n_Trail) or n_Trail > stopHigh)
-        n_Trail := stopHigh 
+    else if (strategy.position_size < 0) and (na(stopPrice) or stopPrice > stopHigh)
+        stopPrice := stopHigh
+      
 else
-    n_Trail := na
+    stopPrice := na
+   
 
 
-plot(n_Trail, color=strategy.position_size>0 ?color.green:
+var float profit_limit = na
+if strategy.position_avg_price != 0
+    if strategy.position_size > 0      
+        profit_limit :=  strategy.position_avg_price*(1+profit_percent)
+
+    else if strategy.position_size < 0 
+        profit_limit :=  strategy.position_avg_price*(1-profit_percent)
+else
+    profit_limit := na
+
+
+plot(stopPrice, color=strategy.position_size>0 ?color.green:
      (strategy.position_size<0 ? color.red:na), linewidth=2, style=plot.style_steplinebr)
 
-plot(trailMethod == "bb"?upper:na)
-plot(trailMethod == "bb"?upper:na)
-plot(trailMethod == "super"?supertrend:na, color=direction<0?  color.green: color.red,  style=plot.style_line)
+guideLine = input.bool(defval = true, title = "Trailing guidelines")
+
+plot(trailMethod == "percent"? stopLow:na, color=color.new(color.green, 80), linewidth = 3, display = guideLine? display.all: display.none)
+plot(trailMethod == "percent"? stopHigh:na, color=color.new(color.red, 80), linewidth = 3, display = guideLine? display.all: display.none)
+plot(trailMethod == "bb"? upper:na, color=color.new(color.green, 80), linewidth = 3, display = guideLine? display.all: display.none)
+plot(trailMethod == "bb"? lower:na, color=color.new(color.red, 80), linewidth = 3, display = guideLine? display.all: display.none)
+plot(trailMethod == "super"? supertrend:na, color=direction<0?  color.new(color.green, 80):color.new(color.red, 80),  linewidth = 3, style=plot.style_line, display = guideLine? display.all: display.none)
+
+plot(profit_limit, color=color.new(color.black, 50), linewidth = 3, style=plot.style_linebr)
 
 
-
-
-// plot(ta.lowest(5))
-strategy.exit("청산", stop = n_Trail)
+strategy.exit("롱청산", from_entry = "롱", stop = stopPrice, limit = profit_limit)
+strategy.exit("숏청산", from_entry = "숏", stop = stopPrice, limit = profit_limit)
 
